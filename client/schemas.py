@@ -9,6 +9,7 @@ class DeviceSchema(SQLAlchemyAutoSchema):
         model = DeviceModel
         include_relationships = True
         load_instance = True
+        unknown = EXCLUDE
 
 
 class AuthSchema(SQLAlchemyAutoSchema):
@@ -22,6 +23,7 @@ class FeedSchema(SQLAlchemyAutoSchema):
         model = FeedModel
         include_relationships = True
         load_instance = True
+        unknown = EXCLUDE
 
 
 class GameSchema(SQLAlchemyAutoSchema):

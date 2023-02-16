@@ -1,5 +1,3 @@
-import json
-
 from requests import Response
 
 from client.arcade_requests.arc_requests import ArcRequest
@@ -31,15 +29,15 @@ class AuthenticationApi:
         resp = self.requests.post(
             "/auth/user-login",
             json=payload,
-            headers={"Content-Type": "application/json"},
         )
-        import pdb
 
-        pdb.set_trace()
-        if resp.status_code == 200:
-            schema = AuthSchema()
-            auth = schema.load(resp.json(), instance=self.auth)
-            session.add(auth)
+        if resp.status_code in [200, 201]:
+            data = resp.json()
+            # TODO: Serialize better
+            self.auth.access_token = data["access_token"]
+            self.auth.refresh_token = data["refresh_token"]
+            self.auth.tenant_id = data["user"]["tenant_id"]
+            session.add(self.auth)
             session.commit()
         else:
             print(f"{resp.status_code}: {resp.content}")
@@ -56,15 +54,19 @@ class Device:
         self.requests.get(self.rel)
 
     def create(self, device: DeviceModel) -> Response:
-        payload = DeviceSchema().load(device)
+        payload = DeviceSchema(exclude=["feed"]).dump(device)
         return self.requests.post(self.rel, json=payload)
 
     def get(self, device: DeviceModel):
         return self.requests.get(self.rel + f"/{device.id}")
 
     def update(self, device: DeviceModel):
-        payload = DeviceSchema().load(device)
-        return self.requests.put(self.rel + f"/{device.id}", json=payload)
+        payload = DeviceSchema(exclude=["feed"]).dump(device)
+        resp = self.requests.put(
+            self.rel + f"/{device.id}",
+            json=payload,
+        )
+        return resp
 
 
 class Feed:

@@ -12,14 +12,14 @@ class ArcRequest:
     def request(self, method: str, url: str, **kwargs):
         url = self.auth.base_url + url
         method = method.upper()
-        headers = kwargs.get("headers")
-        print(kwargs)
+        headers = kwargs.get("headers", {})
         if self.auth.access_token is not None:
             auth_header = {"Authorization": f"Bearer {self.auth.access_token}"}
-            headers = auth_header if headers is None else headers.update(auth_header)
-        request_args = {"url": url, "method": method, "headers": headers}
+            headers.update(auth_header)
+        request_args = {"url": url, "method": method}
         kwargs["headers"] = headers
         request_args.update(kwargs)
+        print(request_args)
         return self.session.request(**request_args)
 
     def get(self, url, **kwargs):

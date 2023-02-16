@@ -15,7 +15,7 @@ class GameHandler:
         stmt = (
             select(GameModel)
             .join(FeedModel)
-            .where(FeedModel.id == device.current_feed.id)
+            .where(FeedModel.id == device.feed.id)
             .where(GameModel.id == self.message.get("id"))
         )
         with Session(engine) as session:

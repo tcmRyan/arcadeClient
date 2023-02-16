@@ -7,4 +7,4 @@ def test_device(session, device, feed):
     device.current_feed = feed
     session.add(device)
     session.commit()
-    assert len(device.current_feed.games) == 5
+    assert len(device.feed.games) == 5

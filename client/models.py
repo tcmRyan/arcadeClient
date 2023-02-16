@@ -23,6 +23,7 @@ class GameModel(Base):
     name: Mapped[str] = mapped_column(String(90))
     path: Mapped[str] = mapped_column(String(180))
     version: Mapped[str] = mapped_column(String(30))
+    game_uri: Mapped[str] = mapped_column(String)
 
 
 class DeviceModel(Base):
@@ -31,10 +32,8 @@ class DeviceModel(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(180))
     active: Mapped[bool] = mapped_column(Boolean)
-    current_feed_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("feed.id"), nullable=True
-    )
-    current_feed: Mapped["FeedModel"] = relationship("FeedModel")
+    feed_id: Mapped[int] = mapped_column(Integer, ForeignKey("feed.id"), nullable=True)
+    feed: Mapped["FeedModel"] = relationship("FeedModel")
     mac: Mapped[str] = mapped_column(String(30))
 
 
@@ -57,8 +56,9 @@ class AuthModel(Base):
     __tablename__ = "auth"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    username: Mapped[str] = mapped_column(String(90))
-    password: Mapped[str] = mapped_column(String(90))
-    base_url: Mapped[str] = mapped_column(String(180))
-    access_token: Mapped[str] = mapped_column(String(180))
-    refresh_token: Mapped[str] = mapped_column(String(180))
+    username: Mapped[str] = mapped_column(String)
+    password: Mapped[str] = mapped_column(String)
+    base_url: Mapped[str] = mapped_column(String)
+    access_token: Mapped[str] = mapped_column(String, nullable=True)
+    refresh_token: Mapped[str] = mapped_column(String, nullable=True)
+    tenant_id: Mapped[int] = mapped_column(String, nullable=True)
