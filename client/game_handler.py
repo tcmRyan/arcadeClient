@@ -1,7 +1,6 @@
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
-from client.main import engine
+from client import DB, default_connection
 from models import GameModel, FeedModel, DeviceModel
 
 
@@ -18,5 +17,5 @@ class GameHandler:
             .where(FeedModel.id == device.feed.id)
             .where(GameModel.id == self.message.get("id"))
         )
-        with Session(engine) as session:
-            session.scalars(stmt).one()
+        with DB(default_connection) as db:
+            db.session.scalars(stmt).one()

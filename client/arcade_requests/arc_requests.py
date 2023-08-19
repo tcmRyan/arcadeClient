@@ -1,6 +1,6 @@
 from requests import Session, Response
 
-from client import session
+from client import db
 from client.models import AuthModel
 
 
@@ -39,8 +39,8 @@ class ArcRequest:
             if refresh_resp.status_code == 200:
                 self.auth.access_token = refresh_resp.json()["access_token"]
                 self.auth.refresh_token = refresh_resp.json(["refresh_token"])
-                session.add(self.auth)
-                session.commit()
+                db.session.add(self.auth)
+                db.session.commit()
                 auth_header = {"Authorization": f"Bearer {self.auth.access_token}"}
                 resp.headers = (
                     auth_header

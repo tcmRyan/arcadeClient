@@ -1,7 +1,7 @@
 from requests import Response
 
 from client.arcade_requests.arc_requests import ArcRequest
-from client import session
+from client import db
 from client.models import AuthModel, DeviceModel, FeedModel, GameModel
 from client.schemas import DeviceSchema, AuthSchema, FeedSchema
 
@@ -37,8 +37,8 @@ class AuthenticationApi:
             self.auth.access_token = data["access_token"]
             self.auth.refresh_token = data["refresh_token"]
             self.auth.tenant_id = data["user"]["tenant_id"]
-            session.add(self.auth)
-            session.commit()
+            db.session.add(self.auth)
+            db.session.commit()
         else:
             print(f"{resp.status_code}: {resp.content}")
         return resp

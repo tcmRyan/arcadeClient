@@ -3,17 +3,9 @@ from collections import namedtuple
 from pathlib import Path
 
 import requests
+from marshmallow import ValidationError
 from paho.mqtt import client as mqtt
-from PyQt6.QtWidgets import (
-    QApplication,
-    QWidget,
-    QLabel,
-    QFormLayout,
-    QLineEdit,
-    QVBoxLayout,
-    QDialogButtonBox,
-    QDialog,
-)
+
 import logging
 import uuid
 
@@ -21,54 +13,17 @@ import click
 
 from paho.mqtt.client import MQTTMessage
 
-from client import session
+from client import db
 from client.arcade_requests.api import Arcade
-from client.models import DeviceModel, AuthModel, GameModel
+from client.models import DeviceModel, AuthModel, GameModel, FeedModel
 from client.schemas import FeedSchema
-
-engine = None
-
-
-class Window(QDialog):
-    def __init__(self):
-        super().__init__(parent=None)
-        self.setWindowTitle("Arcade Share Application")
-        self.setGeometry(100, 100, 400, 200)
-        header = QLabel("<h1>Welcome to Arcade Share </h1>", parent=self)
-        # helloMsg.move(60, 15)
-        dialog_layout = QVBoxLayout()
-        form_layout = QFormLayout()
-        dialog_layout.addWidget(header)
-        form_layout.addRow("Username: ", QLineEdit())
-        form_layout.addRow("Password", QLineEdit())
-
-        dialog_layout.addLayout(form_layout)
-        buttons = QDialogButtonBox()
-        buttons.setStandardButtons(
-            QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok
-        )
-
-        dialog_layout.addWidget(buttons)
-
-        self.setLayout(dialog_layout)
 
 
 def on_message(client, userdata, message: MQTTMessage):
-    print(message)
-    if "game-updated" in message.topic:
-        game_updated_handler(message)
-    elif "feeds/updated" in message.topic:
+    if "feeds/updated" in message.topic:
         feed_updated_handler(message)
     else:
         print(f"Unhandled topic: {message.topic}")
-
-
-def feed_decoder(feed_dict):
-    return namedtuple("Feed", feed_dict.keys())(*feed_dict.values())
-
-
-def game_updated_handler(message):
-    pass
 
 
 def game_filter(game: GameModel, existing_games):
@@ -77,26 +32,42 @@ def game_filter(game: GameModel, existing_games):
         return True
 
 
-def feed_updated_handler(message: MQTTMessage):
-    schema = FeedSchema()
-    data = schema.load(message.payload)
-    feed = session.query(DeviceModel).first()
+Feeds = namedtuple("Feeds", "to_update to_delete")
 
+
+def generate_lists(data: FeedModel, feed: FeedModel | None) -> Feeds:
     if feed and data.id == feed.id:
         existing_games = {game.id: game for game in feed.games}
         new_games = [game.id for game in data.games]
-        game_update_list = filter(
-            lambda game: game_filter(game, existing_games), data.games
-        )
+        game_update_list = [
+            game for game in data.games if game_filter(game, existing_games)
+        ]
         delete_games = [game for game in feed.games if game.id not in new_games]
     else:
         game_update_list = data.games
         delete_games = []
 
-    download_games(data.id, game_update_list)
-    session.add(data)
-    session.commit()
-    cleanup(feed.id, delete_games)
+    return Feeds(game_update_list, delete_games)
+
+
+def feed_updated_handler(message: MQTTMessage):
+    schema = FeedSchema()
+    try:
+        data = json.loads(message.payload)
+        data = schema.load(data)
+    except ValidationError as err:
+        print(err.messages)
+        print(err.valid_data)
+        return
+    feed = db.session.query(DeviceModel).first()
+
+    feeds = generate_lists(data, feed)
+
+    download_games(data.id, feeds.to_update)
+    db.session.add(data)
+    db.session.commit()
+    if feed is not None:
+        cleanup(feed.id, feeds.to_delete)
 
 
 def cleanup(fid, games: list[GameModel]):
@@ -119,7 +90,7 @@ def download_games(fid, games: list[GameModel]):
 
 
 def authenticate(config=False):
-    auth = session.query(AuthModel).first()
+    auth = db.session.query(AuthModel).first()
     if auth is None:
         auth = AuthModel()
         config = True
@@ -127,8 +98,8 @@ def authenticate(config=False):
         auth.username = input("Arcade Share Username: ")
         auth.password = input("Arcade Share Password: ")
         auth.base_url = input("Arcade Share URL: ")
-        session.add(auth)
-        session.commit()
+        db.session.add(auth)
+        db.session.commit()
         api = Arcade(auth)
         resp = api.auth.post()
         if resp.status_code > 200:
@@ -136,8 +107,8 @@ def authenticate(config=False):
 
 
 def provision_device(config=False):
-    auth = session.query(AuthModel).first()
-    device = session.query(DeviceModel).first()
+    auth = db.session.query(AuthModel).first()
+    device = db.session.query(DeviceModel).first()
     create = False
     if device is None:
         device = DeviceModel()
@@ -147,8 +118,8 @@ def provision_device(config=False):
     device.active = True
     if config:
         device.name = input("Please name your device: ")
-        session.add(device)
-        session.commit()
+        db.session.add(device)
+        db.session.commit()
         api = Arcade(auth)
         if create:
             resp = api.device.create(device)
@@ -171,7 +142,7 @@ def configure(config):
     provision_device(config=config)
     mqttc = mqtt.Client()
     mqttc.on_message = on_message
-    auth = session.query(AuthModel).first()
+    auth = db.session.query(AuthModel).first()
     mqttc.username_pw_set(auth.username, auth.password)
     mqttc.enable_logger(logger=logger)
     mqttc.connect(host="127.0.0.1", port=1883, keepalive=60, bind_address="")

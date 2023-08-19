@@ -1,6 +1,5 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from client.database import DB
 
-engine = create_engine("sqlite:///arcade.db")
-conn = engine.connect()
-session = Session(bind=engine)
+default_connection = "sqlite:///arcade.db"
+
+db = DB()

@@ -21,8 +21,7 @@ class GameModel(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(90))
-    path: Mapped[str] = mapped_column(String(180))
-    version: Mapped[str] = mapped_column(String(30))
+    version: Mapped[int] = mapped_column(Integer())
     game_uri: Mapped[str] = mapped_column(String)
 
 
@@ -34,7 +33,6 @@ class DeviceModel(Base):
     active: Mapped[bool] = mapped_column(Boolean)
     feed_id: Mapped[int] = mapped_column(Integer, ForeignKey("feed.id"), nullable=True)
     feed: Mapped["FeedModel"] = relationship("FeedModel")
-    mac: Mapped[str] = mapped_column(String(30))
 
 
 class FeedModel(Base):

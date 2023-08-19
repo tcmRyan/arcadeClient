@@ -1,10 +1,16 @@
-from marshmallow import EXCLUDE
+from marshmallow import EXCLUDE, fields, Schema
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 from client.models import DeviceModel, AuthModel, FeedModel, GameModel
+from client import db
 
 
-class DeviceSchema(SQLAlchemyAutoSchema):
+class BaseSchema(SQLAlchemyAutoSchema):
+    class Meta:
+        sqla_session = db.session
+
+
+class DeviceSchema(BaseSchema):
     class Meta:
         model = DeviceModel
         include_relationships = True
@@ -12,22 +18,25 @@ class DeviceSchema(SQLAlchemyAutoSchema):
         unknown = EXCLUDE
 
 
-class AuthSchema(SQLAlchemyAutoSchema):
+class AuthSchema(BaseSchema):
     class Meta:
         model = AuthModel
         unknown = EXCLUDE
 
 
-class FeedSchema(SQLAlchemyAutoSchema):
+class GameSchema(BaseSchema):
     class Meta:
-        model = FeedModel
+        model = GameModel
         include_relationships = True
         load_instance = True
         unknown = EXCLUDE
 
 
-class GameSchema(SQLAlchemyAutoSchema):
+class FeedSchema(BaseSchema):
+    games = fields.Nested(GameSchema, many=True)
+
     class Meta:
-        model = GameModel
+        model = FeedModel
         include_relationships = True
         load_instance = True
+        unknown = EXCLUDE
