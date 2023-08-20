@@ -13,7 +13,7 @@ import click
 
 from paho.mqtt.client import MQTTMessage
 
-from client import db
+from client import db, default_connection
 from client.arcade_requests.api import Arcade
 from client.models import DeviceModel, AuthModel, GameModel, FeedModel
 from client.schemas import FeedSchema
@@ -138,6 +138,8 @@ def provision_device(config=False):
     "--config", "-c", is_flag=True, help="Enter configuration before running program"
 )
 def configure(config):
+    db.conn_str = default_connection
+    db.create_session()
     authenticate(config=config)
     provision_device(config=config)
     mqttc = mqtt.Client()
