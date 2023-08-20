@@ -16,7 +16,7 @@ from paho.mqtt.client import MQTTMessage
 from client import db, default_connection
 from client.arcade_requests.api import Arcade
 from client.models import DeviceModel, AuthModel, GameModel, FeedModel
-from client.schemas import FeedSchema
+from client.schemas import FeedSchema, DeviceSchema
 
 
 def on_message(client, userdata, message: MQTTMessage):
@@ -118,8 +118,6 @@ def provision_device(config=False):
     device.active = True
     if config:
         device.name = input("Please name your device: ")
-        db.session.add(device)
-        db.session.commit()
         api = Arcade(auth)
         if create:
             resp = api.device.create(device)
@@ -127,6 +125,14 @@ def provision_device(config=False):
             resp = api.device.update(device)
         if resp.status_code == 200:
             print("Device successfully registered")
+            schema = DeviceSchema()
+            raw_data = resp.json()
+            device = schema.load(
+                resp.json(), instance=db.session.query(DeviceModel).get(raw_data["id"])
+            )
+
+            db.session.add(device)
+            db.session.commit()
         else:
             print(
                 f"Received a {resp.status_code} response with the message: {resp.content}"
